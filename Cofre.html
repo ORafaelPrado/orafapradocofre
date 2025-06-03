@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Cofre R$10.000</title>
+  <style>
+    body {
+      font-family: 'Courier New', monospace;
+      background-color: #f4f4f4;
+      padding: 20px;
+      text-align: center;
+    }
+    table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+      width: 100px;
+      height: 60px;
+    }
+    .valor {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .checkbox {
+      transform: scale(1.2);
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      background-color: #c0392b;
+      color: white;
+      border-radius: 5px;
+    }
+    button:hover {
+      background-color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Cofre Interativo - Total R$ 10.000,00</h2>
+
+<table id="cofre-tabela"></table>
+
+<button onclick="resetarCheckboxes()">🧹 Limpar tudo</button>
+
+<script>
+  const valores = [
+    100, 5, 10, 5, 50, 20, 5, 200, 5, 10, 20, 5, 100, 50, 10, 10, 5, 20, 10, 5,
+    200, 5, 10, 20, 5, 100, 200, 5, 10, 5, 50, 20, 200, 200, 100, 20, 10, 5, 200, 5,
+    10, 10, 20, 20, 10, 10, 50, 50, 10, 5, 20, 5, 10, 5, 10, 20, 10, 50, 10, 200,
+    5, 200, 5, 10, 20, 5, 20, 5, 20, 5, 200, 10, 20, 10, 50, 50, 20, 10, 5, 10,
+    5, 100, 5, 20, 10, 10, 5, 100, 5, 5, 5, 10, 5, 10, 10, 5, 20, 5,
+    50, 5, 10, 5, 200, 10, 5, 5, 5, 5, 200, 50, 5, 10, 10, 5, 200, 5,
+    5, 100, 20, 50, 10, 5, 100, 5, 50, 20, 20, 5, 5, 5, 10, 10, 20, 100,
+    10, 5, 50, 50, 10, 5, 100, 10, 5, 5, 10, 200, 5, 10, 5, 100, 5, 5,
+    5, 10, 50, 20, 10, 100, 200, 5, 50, 100, 10, 5, 50, 5, 20, 20, 5, 100,
+    100, 5, 20, 10, 10, 100, 50, 5, 50, 5, 200, 5, 10, 5, 100, 5, 20, 20
+  ];
+
+  const tabela = document.getElementById('cofre-tabela');
+
+  function salvarEstado(index, estado) {
+    localStorage.setItem(`pago_${index}`, estado);
+  }
+
+  function carregarEstado(index) {
+    return localStorage.getItem(`pago_${index}`) === "true";
+  }
+
+  function resetarCheckboxes() {
+    valores.forEach((_, i) => localStorage.removeItem(`pago_${i}`));
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  }
+
+  // Criar tabela 20 linhas x 10 colunas
+  let index = 0;
+  for (let i = 0; i < 20; i++) {
+    const row = document.createElement('tr');
+    for (let j = 0; j < 10; j++) {
+      const cell = document.createElement('td');
+      const valor = valores[index];
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'checkbox';
+      checkbox.checked = carregarEstado(index);
+      checkbox.onchange = () => salvarEstado(index, checkbox.checked);
+
+      const span = document.createElement('span');
+      span.className = 'valor';
+      span.textContent = `R$ ${valor.toFixed(2).replace('.', ',')}`;
+
+      cell.appendChild(span);
+      cell.appendChild(checkbox);
+      row.appendChild(cell);
+      index++;
+    }
+    tabela.appendChild(row);
+  }
+</script>
+
+</body>
+</html>

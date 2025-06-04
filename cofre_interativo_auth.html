@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cofre Interativo - Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f0f4f8;
+      color: #333;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    body.dark {
+      background-color: #121212;
+      color: #f5f5f5;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+      gap: 10px;
+      margin-bottom: 30px;
+    }
+    .cell {
+      padding: 10px;
+      border-radius: 8px;
+      background-color: #fff;
+      border: 2px solid #ccc;
+      text-align: center;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .cell.pago {
+      background-color: #4caf50;
+      color: white;
+    }
+    .dark .cell {
+      background-color: #2c2c2c;
+      border-color: #555;
+    }
+    .dark .cell.pago {
+      background-color: #388e3c;
+    }
+    button, input {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+    }
+    #resumo {
+      display: none;
+      margin-top: 30px;
+    }
+    #login, #app {
+      max-width: 500px;
+      margin: auto;
+    }
+    input {
+      width: 90%;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>💰 Cofre Interativo</h1>
+  <div id="login">
+    <h2>Entrar / Cadastrar</h2>
+    <input type="email" id="email" placeholder="Email" /><br />
+    <input type="password" id="senha" placeholder="Senha" /><br />
+    <button onclick="login()">Entrar</button>
+    <button onclick="signup()">Cadastrar</button>
+  </div>
+
+  <div id="app" style="display:none;">
+    <button onclick="toggleDarkMode()">🌙 Modo Escuro</button>
+    <button onclick="salvar()">💾 Salvar</button>
+    <button onclick="mostrarResumo()">📊 Ver Resumo</button>
+    <button onclick="logout()">🚪 Sair</button>
+
+    <div class="grid" id="depositos"></div>
+
+    <div id="resumo">
+      <h2>Resumo</h2>
+      <p id="pago"></p>
+      <p id="falta"></p>
+    </div>
+  </div>
+
+  <script>
+    const supabaseUrl = 'https://okrprvskvdtrfhzrnaux.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9rdXBydnNrdmR0cmZoenJuYXV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDkwMzYyNjUsImV4cCI6MjA2NDYxMjI2NX0.dqvNPjRMWF88CrqtiP1nemmEbrMWV3RGdw8PXZuoOUI';
+    const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+    let user = null;
+    const totalDepositos = 200;
+    const valorPorDeposito = 50;
+    let depositosFeitos = [];
+
+    async function login() {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
+      if (error) return alert("Erro ao entrar: " + error.message);
+      user = data.user;
+      carregarApp();
+    }
+
+    async function signup() {
+      const email = document.getElementById("email").value;
+      const senha = document.getElementById("senha").value;
+      const { error } = await supabase.auth.signUp({ email, password: senha });
+      if (error) return alert("Erro ao cadastrar: " + error.message);
+      alert("Cadastro feito! Verifique seu e-mail.");
+    }
+
+    async function carregarApp() {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+
+      const session = await supabase.auth.getSession();
+      user = session.data.session?.user;
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('depositos')
+        .select('valores')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data && data.valores) depositosFeitos = data.valores;
+      desenharTabela();
+    }
+
+    function desenharTabela() {
+      const grid = document.getElementById("depositos");
+      grid.innerHTML = "";
+      for (let i = 0; i < totalDepositos; i++) {
+        const cell = document.createElement("div");
+        cell.className = "cell";
+        cell.innerText = `R$${valorPorDeposito}`;
+        if (depositosFeitos.includes(i)) {
+          cell.classList.add("pago");
+        }
+        cell.onclick = () => {
+          if (cell.classList.contains("pago")) {
+            cell.classList.remove("pago");
+            depositosFeitos = depositosFeitos.filter(d => d !== i);
+          } else {
+            cell.classList.add("pago");
+            depositosFeitos.push(i);
+          }
+        };
+        grid.appendChild(cell);
+      }
+    }
+
+    async function salvar() {
+      if (!user) return alert("Usuário não autenticado!");
+      await supabase
+        .from('depositos')
+        .upsert({ user_id: user.id, valores: depositosFeitos });
+      alert("Salvo com sucesso!");
+    }
+
+    function mostrarResumo() {
+      const totalPago = depositosFeitos.length * valorPorDeposito;
+      const totalFalta = 10000 - totalPago;
+      document.getElementById("pago").innerText = `Total Pago: R$${totalPago}`;
+      document.getElementById("falta").innerText = `Falta: R$${totalFalta}`;
+      const resumoDiv = document.getElementById("resumo");
+      resumoDiv.style.display = "block";
+      resumoDiv.scrollIntoView({ behavior: "smooth" });
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark");
+    }
+
+    async function logout() {
+      await supabase.auth.signOut();
+      location.reload();
+    }
+
+    // Check session on load
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        user = data.session.user;
+        carregarApp();
+      }
+    });
+  </script>
+</body>
+</html>
